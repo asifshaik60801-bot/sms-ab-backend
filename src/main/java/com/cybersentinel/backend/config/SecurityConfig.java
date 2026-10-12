@@ -1,3 +1,4 @@
+
 package com.cybersentinel.backend.config;
 
 import org.springframework.context.annotation.Bean;
@@ -21,75 +22,46 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
-
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
             .csrf(csrf -> csrf.disable())
-
-            .cors(cors ->
-                cors.configurationSource(
-                    corsConfigurationSource()
-                )
-            )
-
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
-                )
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-
             .authorizeHttpRequests(auth -> auth
 
-                // CORS preflight
-                .requestMatchers(
-                    HttpMethod.OPTIONS,
-                    "/**"
-                ).permitAll()
+                // Allow CORS preflight requests
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Authentication
+                // Public authentication endpoints
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/auth/register"
                 ).permitAll()
 
-                // Dashboard
+                // Authenticated dashboard endpoints
                 .requestMatchers(
-                    "/api/security-events/**"
-                ).authenticated()
-
-                .requestMatchers(
-                    "/api/alerts/**"
-                ).authenticated()
-
-                .requestMatchers(
-                    "/api/incidents/**"
-                ).authenticated()
-
-                .requestMatchers(
+                    "/api/security-events/**",
+                    "/api/alerts/**",
+                    "/api/incidents/**",
                     "/api/risk-assessments/**"
                 ).authenticated()
 
-                // Admin
-                .requestMatchers(
-                    "/api/users/**"
-                ).hasRole("ADMIN")
+                // Admin-only endpoints
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
 
-                .requestMatchers(
-                    "/api/audit-logs/**"
-                ).hasRole("ADMIN")
-
-                // Other protected endpoints
+                // Protect remaining endpoints
                 .anyRequest().authenticated()
             )
-
             .addFilterBefore(
                 jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class
@@ -101,40 +73,31 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
+            List.of(
+                "http://localhost:5173",
+                "https://securex-frontend.onrender.com"
+            )
         );
 
         configuration.setAllowedMethods(
-                List.of(
-                    "GET",
-                    "POST",
-                    "PUT",
-                    "DELETE",
-                    "OPTIONS"
-                )
+            List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
         );
 
         configuration.setAllowedHeaders(
-                List.of(
-                    "Authorization",
-                    "Content-Type"
-                )
+            List.of("Authorization", "Content-Type")
         );
 
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+            new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
 }
+
